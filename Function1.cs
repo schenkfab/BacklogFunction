@@ -2,18 +2,23 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.IO;
+using System.Net;
 using System.ServiceModel.Syndication;
+using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
+using System.Xml.Serialization;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace BacklogFunction
 {
     public static class Function1
     {
         [FunctionName("Function1")]
-        public static async void Run([TimerTrigger("0 */15 * * * *")]TimerInfo myTimer, ILogger log)
+        public static async void Run([TimerTrigger("0 */10 * * * *")]TimerInfo myTimer, ILogger log)
         {
             log.LogInformation($"C# Timer trigger function started executed at: {DateTime.Now}");
 
@@ -42,22 +47,55 @@ namespace BacklogFunction
         public static List<Article> GetArticles(string url)
         {
             List<Article> articles = new List<Article>();
-
-            XmlReader reader = XmlReader.Create(url);
-            SyndicationFeed feed = SyndicationFeed.Load(reader);
-            reader.Close();
-            foreach (SyndicationItem item in feed.Items)
+            if (url.Contains("youtube.com"))
             {
-                string subject = item.Title.Text;
-                string summary = item.Summary.Text;
-                string image = feed.ImageUrl == null ? null : feed.ImageUrl.ToString();
-                string link = item.Links[0].Uri.ToString();
-                string created = item.PublishDate.UtcDateTime.ToString("yyyy-MM-dd HH':'mm':'ss");
+                //XmlSerializer ser = new XmlSerializer(typeof(YouTubeFeed));
 
-                articles.Add(new Article() { Name = subject, Description = summary, Image = image, Link = link, Created = created });
+                WebClient client = new WebClient();
+
+                string data = Encoding.Default.GetString(client.DownloadData(url));
+
+                Stream stream = new MemoryStream(Encoding.UTF8.GetBytes(data));
+
+                //var document = (YouTubeFeed)ser.Deserialize(stream);
+                XmlReader reader = XmlReader.Create(url);
+                XmlDocument doc = new XmlDocument();
+                doc.Load(reader);
+
+                string json = JsonConvert.SerializeXmlNode(doc);
+                json = json.Replace("@href", "href").Replace("yt:channelId", "channelId").Replace("media:", "").Replace("@url", "url");
+
+                YouTubeFeed yt = JsonConvert.DeserializeObject<YouTubeFeed>(json);
+                BacklogFunction.Feed feed = yt.feed;
+
+                foreach (Entry item in feed.Entry)
+                {
+                    string subject = item.Title;
+                    string summary = item.Group.Description;
+                    string image = item.Group.Thumbnail.Url;
+                    string link = item.Link.Href;
+                    string created = item.Published.ToString("yyyy-MM-dd HH':'mm':'ss");
+
+                    articles.Add(new Article() { Name = subject, Description = summary, Image = image, Link = link, Created = created });
+                }
+
+            } else
+            {
+                XmlReader reader = XmlReader.Create(url);
+                SyndicationFeed feed = SyndicationFeed.Load(reader);
+                reader.Close();
+                foreach (SyndicationItem item in feed.Items)
+                {
+                    string subject = item.Title.Text;
+                    string summary = item.Summary.Text;
+                    string image = feed.ImageUrl == null ? null : feed.ImageUrl.ToString();
+                    string link = item.Links[0].Uri.ToString();
+                    string created = item.PublishDate.UtcDateTime.ToString("yyyy-MM-dd HH':'mm':'ss");
+
+                    articles.Add(new Article() { Name = subject, Description = summary, Image = image, Link = link, Created = created });
+                }
             }
-
-
+           
             return articles;
         }
 
