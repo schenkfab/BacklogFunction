@@ -32,7 +32,7 @@ namespace BacklogFunction
 
                 //Feed f = new Feed();
                 //f.Id = 9999;
-                //f.Url = "http://blog.victoriaholt.co.uk/feeds/posts/default";
+                //f.Url = "http://feeds.feedburner.com/MSSQLTips-LatestSqlServerTips";
                 //feeds = new List<Feed>();
                 //feeds.Add(f);
 
@@ -40,7 +40,7 @@ namespace BacklogFunction
                 {
                     log.LogInformation($"{feed.Url} feed being crawled");
 
-                    List<Article> articles = GetArticles(feed.Url);
+                    List<Article> articles = GetArticles(feed.Url, log);
 
                     await SubmitArticles(articles, feed.Id, str, log);
 
@@ -53,7 +53,7 @@ namespace BacklogFunction
             }
         }
 
-        public static List<Article> GetArticles(string url)
+        public static List<Article> GetArticles(string url, ILogger log)
         {
             List<Article> articles = new List<Article>();
             if (url.Contains("youtube.com"))
@@ -99,9 +99,14 @@ namespace BacklogFunction
                     string summary = item.Summary == null ? "" : item.Summary.Text;
                     string image = feed.ImageUrl == null ? null : feed.ImageUrl.ToString();
                     string link = item.Links[0].Uri.ToString();
-                    string created = item.PublishDate.UtcDateTime.ToString("yyyy-MM-dd HH':'mm':'ss");
-
-                    articles.Add(new Article() { Name = subject, Description = summary, Image = image, Link = link, Created = created });
+                    try
+                    {
+                        string created = item.PublishDate.UtcDateTime.ToString("yyyy-MM-dd HH':'mm':'ss");
+                        articles.Add(new Article() { Name = subject, Description = summary, Image = image, Link = link, Created = created });
+                    } catch (Exception ex)
+                    {
+                        log.LogWarning("Could not add: " + item.Title.Text + " from: " + url + " because of: " + ex.Message);
+                    }
                 }
             }
            
