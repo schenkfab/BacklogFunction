@@ -20,8 +20,7 @@ namespace BacklogFunction
         [FunctionName("Function1")]
         public static async void Run([TimerTrigger("0 */1 * * * *")]TimerInfo myTimer, ILogger log)
         {
-            try
-            {
+            
                 log.LogInformation($"C# Timer trigger function started executed at: {DateTime.Now}");
 
                 // Get the connection string from app settings and use it to create a connection.
@@ -38,19 +37,23 @@ namespace BacklogFunction
 
                 foreach (Feed feed in feeds)
                 {
-                    log.LogInformation($"{feed.Url} feed being crawled");
+                    try
+                    {
+                        log.LogInformation($"{feed.Url} feed being crawled");
 
-                    List<Article> articles = GetArticles(feed.Url, log);
+                        List<Article> articles = GetArticles(feed.Url, log);
 
-                    await SubmitArticles(articles, feed.Id, str, log);
+                        await SubmitArticles(articles, feed.Id, str, log);
 
-                    await FinishCrawl(feed.Id, str, log);
+                        await FinishCrawl(feed.Id, str, log);
+                    }
+                    catch (Exception ex)
+                    {
+                        log.LogError(ex.Message);
+                    }
                 }
                 log.LogInformation($"C# Timer trigger function finished executed at: {DateTime.Now}");
-            } catch (Exception ex)
-            {
-                log.LogError(ex.Message);
-            }
+            
         }
 
         public static List<Article> GetArticles(string url, ILogger log)
