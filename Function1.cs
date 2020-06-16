@@ -18,7 +18,7 @@ namespace BacklogFunction
     public static class Function1
     {
         [FunctionName("Function1")]
-        public static async void Run([TimerTrigger("0 */10 * * * *")]TimerInfo myTimer, ILogger log)
+        public static async void Run([TimerTrigger("0 */5 * * * *")]TimerInfo myTimer, ILogger log)
         {
             log.LogInformation($"C# Timer trigger function started executed at: {DateTime.Now}");
 
@@ -27,6 +27,12 @@ namespace BacklogFunction
 
             // Get all feeds that need to be crawled:
             List<Feed> feeds = await GetFeedsToCrawl(str, log);
+
+            Feed f = new Feed();
+            f.Id = 9999;
+            f.Url = "http://blog.victoriaholt.co.uk/feeds/posts/default";
+            feeds = new List<Feed>();
+            feeds.Add(f);
 
             foreach (Feed feed in feeds)
             {
@@ -87,7 +93,7 @@ namespace BacklogFunction
                 foreach (SyndicationItem item in feed.Items)
                 {
                     string subject = item.Title.Text;
-                    string summary = item.Summary.Text;
+                    string summary = item.Summary == null ? "" : item.Summary.Text;
                     string image = feed.ImageUrl == null ? null : feed.ImageUrl.ToString();
                     string link = item.Links[0].Uri.ToString();
                     string created = item.PublishDate.UtcDateTime.ToString("yyyy-MM-dd HH':'mm':'ss");
