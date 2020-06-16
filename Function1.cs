@@ -18,7 +18,7 @@ namespace BacklogFunction
     public static class Function1
     {
         [FunctionName("Function1")]
-        public static async void Run([TimerTrigger("0 */5 * * * *")]TimerInfo myTimer, ILogger log)
+        public static async void Run([TimerTrigger("0 */1 * * * *")]TimerInfo myTimer, ILogger log)
         {
             try
             {
