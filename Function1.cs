@@ -20,34 +20,37 @@ namespace BacklogFunction
         [FunctionName("Function1")]
         public static async void Run([TimerTrigger("0 */5 * * * *")]TimerInfo myTimer, ILogger log)
         {
-            log.LogInformation($"C# Timer trigger function started executed at: {DateTime.Now}");
-
-            // Get the connection string from app settings and use it to create a connection.
-            var str = Environment.GetEnvironmentVariable("sqldb_connection");
-
-            // Get all feeds that need to be crawled:
-            List<Feed> feeds = await GetFeedsToCrawl(str, log);
-
-            Feed f = new Feed();
-            f.Id = 9999;
-            f.Url = "http://blog.victoriaholt.co.uk/feeds/posts/default";
-            feeds = new List<Feed>();
-            feeds.Add(f);
-
-            foreach (Feed feed in feeds)
+            try
             {
-                log.LogInformation($"{feed.Url} feed being crawled");
+                log.LogInformation($"C# Timer trigger function started executed at: {DateTime.Now}");
 
-                List<Article> articles = GetArticles(feed.Url);
+                // Get the connection string from app settings and use it to create a connection.
+                var str = Environment.GetEnvironmentVariable("sqldb_connection");
 
-                await SubmitArticles(articles, feed.Id, str, log);
+                // Get all feeds that need to be crawled:
+                List<Feed> feeds = await GetFeedsToCrawl(str, log);
 
-                await FinishCrawl(feed.Id, str, log);
+                //Feed f = new Feed();
+                //f.Id = 9999;
+                //f.Url = "http://blog.victoriaholt.co.uk/feeds/posts/default";
+                //feeds = new List<Feed>();
+                //feeds.Add(f);
+
+                foreach (Feed feed in feeds)
+                {
+                    log.LogInformation($"{feed.Url} feed being crawled");
+
+                    List<Article> articles = GetArticles(feed.Url);
+
+                    await SubmitArticles(articles, feed.Id, str, log);
+
+                    await FinishCrawl(feed.Id, str, log);
+                }
+                log.LogInformation($"C# Timer trigger function finished executed at: {DateTime.Now}");
+            } catch (Exception ex)
+            {
+                log.LogError(ex.Message);
             }
-
-
-            log.LogInformation($"C# Timer trigger function finished executed at: {DateTime.Now}");
-
         }
 
         public static List<Article> GetArticles(string url)
